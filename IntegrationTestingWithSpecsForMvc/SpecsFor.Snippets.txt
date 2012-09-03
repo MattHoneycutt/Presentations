@@ -1,0 +1,81 @@
+	public class when_a_new_support_request_is_submitted : SpecsFor<MvcWebApp>
+	{
+		protected override void Given()
+		{
+			Given<UserIsUnauthenticated>();
+			base.Given();
+		}
+
+		protected override void When()
+		{
+			SUT.NavigateTo<SupportRequestController>(c => c.Submit());
+			SUT.FindFormFor<SubmitSupportRequestForm>()
+				.Field(f => f.Subject).SetValueTo("Fail Tracker ROCKS")
+				.Field(f => f.From).SetValueTo("number1fan@failtrackerfans.com")
+				.Field(f => f.Body).SetValueTo("You guys frickin' rule!")
+				.Submit();
+		}
+
+		[Test]
+		public void then_it_acknowledges_the_submission()
+		{
+			SUT.Route.ShouldMapTo<SupportRequestController>(c => c.ThankYou());
+			SUT.FindDisplayFor<SupportAcknowledgementViewModel>()
+				.DisplayFor(m => m.From).Text.ShouldEqual("number1fan@failtrackerfans.com");
+		}
+
+		[Test]
+		public void then_it_sends_the_devs_an_email()
+		{
+			SUT.Mailbox().MailMessages.ShouldContain(m => m.To[0].Address == "mbhoneycutt@gmail.com");
+		}
+	}
+	
+	public class SubmitSupportRequestForm
+	{
+		public string Subject { get; set; }
+
+		public string From { get; set; }
+
+		public string Body { get; set; }
+	}
+	
+	<h2>Need help?</h2>
+	@using(Html.BeginForm())
+	{
+		@Html.EditorForModel()
+	   @MyHelpers.ControlBox("Contact Us")
+	}
+	
+	public class SupportRequestController : FailTrackerController
+	{
+		public ActionResult Submit()
+		{
+			return View();
+		}
+
+		[HttpPost]
+		public ActionResult Submit(SubmitSupportRequestForm form)
+		{
+			try
+			{
+				using (var client = new SmtpClient())
+				{
+					client.Send(form.From, "mbhoneycutt@gmail.com", form.Subject, form.Body);
+				}
+			}
+			//Who cares? They're just paying us!
+			catch
+			{
+				
+			}
+
+			TempData["From"] = form.From;
+			return this.RedirectToAction(c => c.ThankYou());
+		}
+
+		public ActionResult ThankYou()
+		{
+			return View(new SupportAcknowledgementViewModel{From = (string) TempData["From"]});
+		}
+	}
