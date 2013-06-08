@@ -1,16 +1,16 @@
+using System;
 using StructureMap.Interceptors;
-using StructureMap.Pipeline;
 
 namespace TryCatchFail.LearnStructureMap.Lesson4.Utils
 {
 	public class DecoratedInstance<TTarget>
 	{
-		private readonly SmartInstance<TTarget> _instance;
+		private readonly Action<ContextEnrichmentHandler<TTarget>> _decorateCommand;
 		private ContextEnrichmentHandler<TTarget> _decorator;
 
-		public DecoratedInstance(SmartInstance<TTarget> instance, ContextEnrichmentHandler<TTarget> decorator)
+		public DecoratedInstance(Action<ContextEnrichmentHandler<TTarget>> decorateCommand, ContextEnrichmentHandler<TTarget> decorator)
 		{
-			_instance = instance;
+			_decorateCommand = decorateCommand;
 			_decorator = decorator;
 		}
 
@@ -21,17 +21,19 @@ namespace TryCatchFail.LearnStructureMap.Lesson4.Utils
 			var previousDecorator = _decorator;
 
 			ContextEnrichmentHandler<TTarget> newDecorator = (ctx, t) =>
-			                                                 	{
-			                                                 		var pluginType = ctx.BuildStack.Current.RequestedType;
+			{
+				var pluginType = ctx.BuildStack.Current != null
+						                ? ctx.BuildStack.Current.RequestedType
+						                : typeof (TTarget);
 
-			                                                 		var innerInstance = previousDecorator(ctx, t);
+				var innerInstance = previousDecorator(ctx, t);
 
-			                                                 		ctx.RegisterDefault(pluginType, innerInstance);
+				ctx.RegisterDefault(pluginType, innerInstance);
 
-			                                                 		return ctx.GetInstance<TDecorator>();
-			                                                 	};
+				return ctx.GetInstance<TDecorator>();
+			};
 
-			_instance.EnrichWith(newDecorator);
+			_decorateCommand(newDecorator);
 
 			_decorator = newDecorator;
 

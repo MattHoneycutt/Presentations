@@ -17,9 +17,10 @@ namespace TryCatchFail.LearnStructureMap.Lesson4
 			var container = new Container(cfg =>
 			                              	{
 			                              		cfg.For<User>().Use(currentUser);
-			                              		cfg.For<IProductRepository>().Use<InMemoryProductRepository>()
-			                              			.Decorate().With<ProductSecurityDecorator>()
-			                              			.AndThen<ProductRepoLogger>()
+			                              		cfg.For<IProductRepository>().Use<InMemoryProductRepository>();
+												cfg.For<IProductRepository>()
+													.Decorate().With<ProductSecurityDecorator>()
+													.AndThen<ProductRepoLogger>()
 													.AndThen<RudeProductRepoLogger>();
 			                              		cfg.For<IProductAuthorizer>().Use<ProductAuthorizer>();
 			                              	});
